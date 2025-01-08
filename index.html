@@ -199,7 +199,7 @@
           `- ${item.name} x${item.quantity} ($${item.price * item.quantity})`
         ).join('\n')}\n\nTotal: $${this.cartTotal}\nMétodo de entrega: ${this.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Recoger en tienda'}\n\nPor favor, envíame el link de pago.`)
         
-        window.open(`https://wa.me/5077371506?text=${message}`, '_blank')
+        window.open(`https://wa.me/50377371506?text=${message}`, '_blank')
         
         this.showCart = false
         this.cart = []
