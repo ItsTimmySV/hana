@@ -1,0 +1,217 @@
+<html><head><base href="." /><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Mi Tienda Online</title><script src="https://unpkg.com/vue@3/dist/vue.global.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" /><style>
+  .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+  .fade-enter-from, .fade-leave-to { opacity: 0; }
+  .slide-enter-active, .slide-leave-active { transition: all 0.3s ease-out; }
+  .slide-enter-from { transform: translateX(20px); opacity: 0; }
+  .slide-leave-to { transform: translateX(-20px); opacity: 0; }
+  </style></head><body class="bg-gray-100">
+  
+  <div id="app">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Mi Tienda Online</h1>
+        <div class="flex items-center gap-4">
+          <button @click="showCart = true" class="relative">
+            <i class="fas fa-shopping-cart text-xl"></i>
+            <span v-if="cartCount" class="absolute -top-2 -right-2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-xs">
+              {{cartCount}}
+            </span>
+          </button>
+          <button @click="currentView = 'orders'" class="hover:text-gray-200">
+            <i class="fas fa-clipboard-list"></i> Mis Pedidos
+          </button>
+        </div>
+      </div>
+    </nav>
+  
+    <!-- Main Content -->
+    <div class="container mx-auto p-4">
+      <!-- Products View -->
+      <div v-if="currentView === 'products'" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div v-for="product in products" :key="product.id" 
+             class="bg-white rounded-lg shadow-md p-4 transition-transform hover:scale-105">
+          <div class="h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
+            <i :class="product.icon" class="text-4xl text-gray-600"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">{{product.name}}</h3>
+          <p class="text-gray-600 mb-2">{{product.description}}</p>
+          <p class="text-lg font-bold text-blue-600 mb-2">${{product.price}}</p>
+          <p class="text-sm text-gray-500 mb-2">Stock: {{product.stock}}</p>
+          <button @click="addToCart(product)" 
+                  :disabled="product.stock === 0"
+                  class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+            {{product.stock === 0 ? 'Sin Stock' : 'Agregar al Carrito'}}
+          </button>
+        </div>
+      </div>
+  
+      <!-- Orders View -->
+      <div v-if="currentView === 'orders'" class="bg-white rounded-lg shadow-md p-4">
+        <h2 class="text-2xl font-bold mb-4">Mis Pedidos</h2>
+        <div v-if="orders.length === 0" class="text-center text-gray-500">
+          No tienes pedidos aún
+        </div>
+        <div v-else class="space-y-4">
+          <div v-for="order in orders" :key="order.id" class="border-b pb-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-semibold">Pedido #{{order.id}}</p>
+                <p class="text-sm text-gray-600">{{order.date}}</p>
+              </div>
+              <div class="text-right">
+                <p class="font-bold text-blue-600">${{order.total}}</p>
+                <p class="text-sm text-gray-600">{{order.status}}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Shopping Cart Sidebar -->
+    <div v-if="showCart" 
+         class="fixed inset-0 bg-black bg-opacity-50 z-50"
+         @click="showCart = false">
+      <div class="absolute right-0 top-0 h-full w-96 bg-white p-6"
+           @click.stop>
+        <h2 class="text-2xl font-bold mb-4">Carrito de Compras</h2>
+        <div v-if="cart.length === 0" class="text-center text-gray-500">
+          Tu carrito está vacío
+        </div>
+        <div v-else>
+          <div v-for="item in cart" :key="item.id" class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-semibold">{{item.name}}</h3>
+              <p class="text-sm text-gray-600">Cantidad: {{item.quantity}}</p>
+            </div>
+            <div class="text-right">
+              <p class="font-bold">${{item.price * item.quantity}}</p>
+              <button @click="removeFromCart(item)" class="text-red-500 text-sm">
+                Eliminar
+              </button>
+            </div>
+          </div>
+          <div class="border-t pt-4 mt-4">
+            <div class="flex justify-between mb-4">
+              <span class="font-bold">Total:</span>
+              <span class="font-bold">${{cartTotal}}</span>
+            </div>
+            <div class="space-y-4">
+              <select v-model="deliveryMethod" class="w-full p-2 border rounded">
+                <option value="delivery">Envío a domicilio</option>
+                <option value="pickup">Recoger en tienda</option>
+              </select>
+              <button @click="redirectToWhatsApp" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600">
+                Contactar vendedor por WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+  const { createApp } = Vue
+  
+  createApp({
+    data() {
+      return {
+        currentView: 'products',
+        showCart: false,
+        deliveryMethod: 'delivery',
+        products: [
+          {
+            id: 1,
+            name: 'Smartphone XYZ',
+            description: 'Último modelo con cámara de alta resolución',
+            price: 599.99,
+            stock: 10,
+            icon: 'fas fa-mobile-alt'
+          },
+          {
+            id: 2,
+            name: 'Laptop Pro',
+            description: 'Potente laptop para trabajo y gaming',
+            price: 1299.99,
+            stock: 5,
+            icon: 'fas fa-laptop'
+          },
+          {
+            id: 3,
+            name: 'Auriculares Bluetooth',
+            description: 'Calidad de sonido premium',
+            price: 99.99,
+            stock: 15,
+            icon: 'fas fa-headphones'
+          }
+        ],
+        cart: [],
+        orders: []
+      }
+    },
+    computed: {
+      cartCount() {
+        return this.cart.reduce((sum, item) => sum + item.quantity, 0)
+      },
+      cartTotal() {
+        return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+      }
+    },
+    methods: {
+      addToCart(product) {
+        const existingItem = this.cart.find(item => item.id === product.id)
+        if (existingItem) {
+          if (existingItem.quantity < product.stock) {
+            existingItem.quantity++
+          }
+        } else {
+          this.cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1
+          })
+        }
+        this.updateStock(product.id, -1)
+      },
+      removeFromCart(item) {
+        const index = this.cart.indexOf(item)
+        if (index > -1) {
+          this.updateStock(item.id, item.quantity)
+          this.cart.splice(index, 1)
+        }
+      },
+      updateStock(productId, quantity) {
+        const product = this.products.find(p => p.id === productId)
+        if (product) {
+          product.stock += quantity
+        }
+      },
+      redirectToWhatsApp() {
+        if (this.cart.length === 0) {
+          Swal.fire('Error', 'Tu carrito está vacío', 'error')
+          return
+        }
+  
+        const message = encodeURIComponent(`¡Hola! Me gustaría comprar los siguientes productos:\n\n${this.cart.map(item => 
+          `- ${item.name} x${item.quantity} ($${item.price * item.quantity})`
+        ).join('\n')}\n\nTotal: $${this.cartTotal}\nMétodo de entrega: ${this.deliveryMethod === 'delivery' ? 'Envío a domicilio' : 'Recoger en tienda'}\n\nPor favor, envíame el link de pago.`)
+        
+        window.open(`https://wa.me/5077371506?text=${message}`, '_blank')
+        
+        this.showCart = false
+        this.cart = []
+        
+        Swal.fire(
+          '¡Solicitud enviada!',
+          'Un asesor te atenderá por WhatsApp para procesar tu pago',
+          'success'
+        )
+      }
+    }
+  }).mount('#app')
+  </script>
+  
+  </body></html>
